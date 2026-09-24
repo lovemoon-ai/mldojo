@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lovemoon-ai/mldojo/recipes/schema/recipe.schema.json",
+  "title": "MLDojo recipe (mldojo/v1)",
+  "description": "Declarative experiment recipe. Add `# yaml-language-server: $schema=<path to this file>` at the top of a recipe for editor validation. The Go parser in recipes/ is authoritative.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run"],
+  "properties": {
+    "apiVersion": {"const": "mldojo/v1"},
+    "kind": {"const": "Experiment"},
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "project": {"$ref": "#/$defs/name"},
+        "name": {"$ref": "#/$defs/name"},
+        "description": {"type": "string"},
+        "tags": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "code": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": {"enum": ["git", "local", "inline-patch", "none"], "description": "git: bundle the enclosing checkout (commit + dirty patch recorded) or let the agent clone repo@ref; local: bundle `path`; inline-patch: clone repo@ref and apply `patch`; none: ship nothing and run against what is already on the node (pair with an absolute run.workdir)"},
+        "repo": {"type": "string"},
+        "ref": {"type": "string"},
+        "path": {"type": "string", "description": "directory to bundle, relative to the recipe file (default .)"},
+        "patch": {"type": "string", "description": "patch file for inline-patch, relative to the recipe file"}
+      }
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default": {"$ref": "#/$defs/envSpec"},
+        "overrides": {"type": "array", "items": {"$ref": "#/$defs/override", "properties": {"use": {"$ref": "#/$defs/envSpec"}}}}
+      }
+    },
+    "datasets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string"},
+          "version": {"type": "string", "description": "empty = newest registered version"},
+          "mount": {"type": "string", "pattern": "^/"}
+        }
+      }
+    },
+    "models": {
+      "type": "array",
+      "description": "registered model versions this run reads; each fills a run parameter, so the command keeps writing ${ckpt}",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string", "description": "\"name\" or \"project/name\"; unqualified means metadata.project"},
+          "version": {"type": "string", "description": "a version number, or latest (default) | production | staging"},
+          "as": {"type": "string", "description": "the run parameter it fills (default \"model\")"}
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cmd"],
+      "properties": {
+        "cmd": {"type": "string", "description": "shell command; ${param} / ${project} / ${experiment} are substituted, other ${VARS} are left to the shell"},
+        "workdir": {"type": "string", "default": ".", "description": "relative to the shipped code, or an absolute path on the node to run in place (implies code.source none)"},
+        "setup": {"type": "string", "description": "shell run before cmd inside the env"},
+        "params": {"type": "object", "additionalProperties": true, "description": "list values are expanded by --matrix; otherwise the first element is used"},
+        "env": {"type": "object", "additionalProperties": {"type": "string"}},
+        "wandb": {"enum": ["shim", "off"], "description": "shim: `import wandb` logs to MLDojo"}
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default": {"$ref": "#/$defs/resources"},
+        "overrides": {"type": "array", "items": {"$ref": "#/$defs/override", "properties": {"use": {"$ref": "#/$defs/resources"}}}}
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "logs": {"type": "string"},
+        "checkpoints": {"type": "string"},
+        "videos": {"type": "string"},
+        "images": {"type": "string"},
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "path"],
+            "properties": {"type": {"enum": ["tensorboard", "jsonl"]}, "path": {"type": "string"}}
+          }
+        },
+        "model": {"type": "string", "description": "register the newest collected checkpoint as a version of this model when the run succeeds; needs outputs.checkpoints"},
+        "episodes": {
+          "type": "array",
+          "description": "per-episode evaluation results; makes the run's result a rate over trials",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path"],
+            "properties": {
+              "type": {"enum": ["csv", "jsonl", "filenames"], "description": "omit to infer from the path"},
+              "path": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "re-run a job the platform lost, resuming from its last checkpoint",
+      "properties": {
+        "max": {"type": "integer", "minimum": 0, "maximum": 10},
+        "on": {"enum": ["infra", "any"], "description": "infra (default): only failures the platform caused. any: also a non-zero exit from the job itself"},
+        "resume_from": {"type": "string", "description": "glob over the failed attempt's checkpoints; the newest match is passed to the next attempt as MLDOJO_RESUME_FROM"}
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pre_submit": {"type": "string", "description": "python script: recipe JSON on stdin -> recipe JSON on stdout (run by the CLI)"}
+      }
+    }
+  },
+  "$defs": {
+    "name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$"},
+    "envSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {"enum": ["docker", "conda", "venv", "none"]},
+        "spec": {"type": "string", "description": "conda: environment.yaml or an existing env name; venv: requirements file"},
+        "image": {"type": "string"},
+        "vars": {"type": "object", "additionalProperties": {"type": "string"}}
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gpus": {"type": "integer", "minimum": 0},
+        "gpu_type": {"type": "string", "description": "alternatives, e.g. 3090|4090|5090|h20 (substring match on the GPU model)"},
+        "min_mem_gb": {"type": "integer", "minimum": 0},
+        "workers": {"type": "integer", "minimum": 0},
+        "gpu_per_worker": {"type": "integer", "minimum": 0},
+        "cpu_per_worker": {"type": "integer", "minimum": 0},
+        "cpu_mem_ratio": {"type": "integer", "minimum": 0},
+        "wall_time_min": {"type": "integer", "minimum": 0}
+      }
+    },
+    "override": {
+      "type": "object",
+      "required": ["when", "use"],
+      "properties": {
+        "when": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "backend_kind": {"enum": ["node", "queue"]},
+            "backend": {"type": "string", "description": "queue plugin name or node id"},
+            "backend_id": {"type": "string"},
+            "target": {"type": "string"},
+            "labels": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    }
+  }
+}

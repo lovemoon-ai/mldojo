@@ -1,0 +1,24 @@
+# Random search over the hello-world recipe.
+#
+#   mldojo sweep create -f recipes/examples/hello/sweep.yaml
+#   mldojo sweep show smoke/lr-search
+#
+# The controller launches up to max_parallel runs at a time until max_runs is
+# reached, so a sweep does not dump its whole budget on the cluster at once.
+apiVersion: mldojo/v1
+kind: Sweep
+metadata:
+  project: smoke
+  name: lr-search
+recipe: recipe.yaml          # relative to this file
+target: node:local           # or pool:5090 to let the scheduler place them
+method: random               # random | grid (grid needs `values` on every axis)
+metric:
+  name: loss                 # what the runs report
+  goal: min
+budget:
+  max_runs: 6
+  max_parallel: 2
+space:
+  seed: {int_uniform: [0, 1000]}
+  steps: {values: [10, 20, 40]}

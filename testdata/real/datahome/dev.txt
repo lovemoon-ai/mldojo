@@ -1,0 +1,19 @@
+USER=carol
+HOME=/home/carol/.mldojo-probe-home
+HOMEMNT=/
+FS	tmpfs	3231840	/run
+FS	ext4	630891068	/
+FS	tmpfs	15932028	/dev/shm
+FS	tmpfs	5116	/run/lock
+FS	efivarfs	64	/sys/firmware/efi/efivars
+FS	vfat	517016	/boot/efi
+FS	tmpfs	3234584	/run/user/1000
+MNT	/run	n
+MNT	/	n
+UDIR	/	//home/carol	y	y
+MNT	/dev/shm	y
+MNT	/run/lock	y
+MNT	/sys/firmware/efi/efivars	n
+MNT	/boot/efi	n
+MNT	/run/user/1000	y
+DONE

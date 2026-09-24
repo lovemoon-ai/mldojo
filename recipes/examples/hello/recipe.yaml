@@ -1,0 +1,25 @@
+# M1 smoke test: runs anywhere with python3 (node:local, node:gpu-a, ...).
+apiVersion: mldojo/v1
+kind: Experiment
+metadata:
+  project: smoke
+  name: hello-world
+  tags: [smoke]
+code:
+  source: local
+  path: .
+env:
+  default:
+    type: none
+run:
+  cmd: SEED=${seed} python3 train.py ${steps}
+  params:
+    seed: [0, 1]
+    steps: 20
+resources:
+  default:
+    gpus: 0
+outputs:
+  checkpoints: outputs/*.ckpt
+  metrics:
+    - {type: jsonl, path: outputs/metrics.jsonl}

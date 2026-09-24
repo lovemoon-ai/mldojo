@@ -1,0 +1,37 @@
+USER=root
+HOME=/root/.mldojo-probe-home
+HOMEMNT=/
+FS	overlay	27702480	/
+FS	tmpfs	65536	/dev
+FS	overlay	2210706176	/nix
+FS	ext4	2210706176	/etc/hosts
+FS	tmpfs	234356732	/mlplatform/.token
+FS	fuse.s3fs	18014398509465600	/team-log-data
+FS	fuse.s3fs	18014398509465600	/team-privacy-data
+FS	fuse.s3fs	18014398509465600	/team-tmp
+FS	tmpfs	164049128	/dev/shm
+FS	ext4	27702480	/ebs/docker
+FS	tmpfs	197886448	/run/gpu_state_collector
+FS	gpfs	15939656704	/vepfs-data/fileset1
+FS	ext4	116493396	/usr/bin/nvidia-smi
+FS	tmpfs	1011276920	/proc/driver/nvidia
+FS	tmpfs	1011276928	/etc/nvidia/nvidia-application-profiles-rc.d
+FS	tmpfs	1011276932	/proc/acpi
+FS	tmpfs	1011276932	/sys/firmware
+MNT	/	y
+UDIR	/	//root	y	y
+MNT	/dev	y
+MNT	/nix	n
+MNT	/mlplatform/.token	n
+MNT	/team-log-data	y
+MNT	/team-privacy-data	y
+MNT	/team-tmp	y
+MNT	/dev/shm	y
+MNT	/ebs/docker	y
+MNT	/run/gpu_state_collector	n
+MNT	/vepfs-data/fileset1	y
+MNT	/proc/driver/nvidia	y
+MNT	/etc/nvidia/nvidia-application-profiles-rc.d	y
+MNT	/proc/acpi	n
+MNT	/sys/firmware	n
+DONE

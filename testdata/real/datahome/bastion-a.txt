@@ -1,0 +1,76 @@
+USER=bob
+HOME=/home/users/bob/.mldojo-probe-home
+HOMEMNT=/home
+FS	tmpfs	101473228	/run
+FS	xfs	25232800	/
+FS	tmpfs	497706844	/dev/shm
+FS	tmpfs	5120	/run/lock
+FS	vfat	1092400	/boot/efi
+FS	xfs	1419246704	/home
+FS	tmpfs	105651868	/run/user/1115021733
+FS	tmpfs	105651768	/run/user/1115021739
+FS	tmpfs	105651868	/run/user/1115021722
+FS	tmpfs	105651868	/run/user/1115021741
+FS	tmpfs	105651780	/run/user/1115021734
+FS	tmpfs	105651832	/run/user/1115021767
+FS	tmpfs	105651636	/run/user/1115021764
+FS	tmpfs	105651868	/run/user/1115021724
+FS	tmpfs	105651868	/run/user/1115025568
+FS	tmpfs	105651864	/run/user/1115021962
+FS	tmpfs	105651868	/run/user/1115023482
+FS	tmpfs	105651868	/run/user/1115022352
+FS	tmpfs	105651836	/run/user/1115021721
+FS	tmpfs	105651764	/run/user/1115021752
+FS	tmpfs	105651836	/run/user/1115021770
+FS	tmpfs	105651868	/run/user/1115021751
+FS	tmpfs	105651868	/run/user/1115026384
+FS	tmpfs	105651788	/run/user/1115021735
+FS	fuse.juicefs	4836934013264	/jfs-public
+FS	tmpfs	105651844	/run/user/1115026401
+FS	fuse.juicefs	702184100444560	/shared-bucket/team_lab
+FS	fuse.juicefs	252383509814632	/shared-bucket/robot_lab
+FS	tmpfs	105651868	/run/user/1115021768
+FS	tmpfs	105651640	/run/user/1115026176
+FS	tmpfs	105651868	/run/user/1115026676
+FS	tmpfs	105651868	/run/user/1115021738
+FS	tmpfs	105651784	/run/user/1115021992
+FS	tmpfs	105651868	/run/user/1115021746
+FS	tmpfs	105651868	/run/user/1115027082
+MNT	/run	n
+MNT	/	n
+MNT	/dev/shm	y
+MNT	/run/lock	y
+MNT	/boot/efi	n
+MNT	/home	n
+UDIR	/home	/home/users/bob	y	y
+MNT	/run/user/1115021733	n
+MNT	/run/user/1115021739	n
+MNT	/run/user/1115021722	n
+MNT	/run/user/1115021741	n
+MNT	/run/user/1115021734	n
+MNT	/run/user/1115021767	n
+MNT	/run/user/1115021764	n
+MNT	/run/user/1115021724	n
+MNT	/run/user/1115025568	n
+MNT	/run/user/1115021962	n
+MNT	/run/user/1115023482	n
+MNT	/run/user/1115022352	n
+MNT	/run/user/1115021721	n
+MNT	/run/user/1115021752	n
+MNT	/run/user/1115021770	n
+MNT	/run/user/1115021751	n
+MNT	/run/user/1115026384	n
+MNT	/run/user/1115021735	n
+MNT	/jfs-public	y
+MNT	/run/user/1115026401	n
+MNT	/shared-bucket/team_lab	y
+UDIR	/shared-bucket/team_lab	/shared-bucket/team_lab/users/bob	y	y
+MNT	/shared-bucket/robot_lab	y
+MNT	/run/user/1115021768	n
+MNT	/run/user/1115026176	n
+MNT	/run/user/1115026676	y
+MNT	/run/user/1115021738	n
+MNT	/run/user/1115021992	n
+MNT	/run/user/1115021746	n
+MNT	/run/user/1115027082	n
+DONE

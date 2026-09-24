@@ -1,0 +1,22 @@
+# mldojo node add -f docs/examples/node-bastion.yaml [--dry-run]
+# A GPU node behind an SSH bastion. Replace the placeholders with your own values.
+id: bastion-gpu-1
+display_name: "Bastion GPU 1 (8x GPU)"
+labels: [8gpu, big-node]
+connection:
+  type: ssh
+  host: bastion.example.com
+  port: 2222
+  user: "alice@alice@192.0.2.20"                     # @-nested bastion user (bastion-specific syntax)
+  identity: secret://ssh_keys/id_ed25519
+  via:                                               # tried in order
+    - node: gpu-a
+    - node: local
+  # If the bastion denies remote forwarding (-R), reverse_tunnel is not an
+  # option; such nodes reach the API directly (e.g. http://mldojo.internal:8765).
+proxy:
+  http: http://proxy.example.com:3128
+  https: http://proxy.example.com:3128
+  no_proxy: [example.com, 10.0.0.0/8]
+datasets_cache_root: /home/alice/mldojo/datasets
+workdir_root: /home/alice/mldojo/runs

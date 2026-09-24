@@ -1,0 +1,46 @@
+# MLDojo full stack: docker compose up -d
+#   web     http://localhost:3000   (static app + /api proxy)
+#   api     http://localhost:8765   (agents dial this; set MLDOJO_PUBLIC_URL to an address nodes can reach)
+# Settings come from the environment or ./.env (copy .env.example). There is
+# no default database password: set POSTGRES_PASSWORD (URL-safe characters).
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mldojo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD (see .env.example)}
+      POSTGRES_DB: mldojo
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mldojo"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: {context: ., dockerfile: deploy/compose/api.Dockerfile}
+    restart: unless-stopped
+    depends_on: {postgres: {condition: service_healthy}}
+    environment:
+      MLDOJO_DATABASE_URL: postgres://mldojo:${POSTGRES_PASSWORD}@postgres:5432/mldojo?sslmode=disable
+      MLDOJO_PUBLIC_URL: ${MLDOJO_PUBLIC_URL:-http://localhost:8765}
+      MLDOJO_API_TOKEN: ${MLDOJO_TOKEN:-}
+      MLDOJO_MASTER_KEY: ${MLDOJO_MASTER_KEY:-}
+      MLDOJO_MASTER_KEY_FILE: /data/master.key
+      MLDOJO_NO_KEYCHAIN: "1"
+      MLDOJO_DATA_DIR: /data
+      MLDOJO_QUEUE_PLUGINS: ${MLDOJO_QUEUE_PLUGINS:-}
+    ports: ["8765:8765"]
+    volumes: [apidata:/data]
+
+  web:
+    build: {context: ., dockerfile: deploy/compose/web.Dockerfile}
+    restart: unless-stopped
+    depends_on: [api]
+    ports: ["3000:80"]
+
+
+volumes:
+  pgdata: {}
+  apidata: {}

@@ -1,0 +1,34 @@
+USER=bob
+HOME=/home/users/bob/.mldojo-probe-home
+HOMEMNT=/home
+FS	tmpfs	105615604	/run
+FS	ext4	342908492	/
+FS	tmpfs	527074796	/dev/shm
+FS	tmpfs	5120	/run/lock
+FS	vfat	1092400	/boot/efi
+FS	xfs	23694280284	/home
+FS	fuse.juicefs	4836579577000	/jfs-public
+FS	fuse.juicefs	702181051167324	/shared-bucket/team_lab
+FS	fuse.juicefs	251834345395704	/shared-bucket/robot_lab
+FS	tmpfs	105651868	/run/user/1115025059
+FS	tmpfs	105651868	/run/user/1115025183
+FS	tmpfs	105651868	/run/user/1115026676
+FS	tmpfs	105651868	/run/user/1115022789
+FS	tmpfs	105651868	/run/user/1115021738
+MNT	/run	n
+MNT	/	n
+MNT	/dev/shm	y
+MNT	/run/lock	y
+MNT	/boot/efi	n
+MNT	/home	n
+UDIR	/home	/home/users/bob	y	y
+MNT	/jfs-public	y
+MNT	/shared-bucket/team_lab	y
+UDIR	/shared-bucket/team_lab	/shared-bucket/team_lab/users/bob	y	y
+MNT	/shared-bucket/robot_lab	y
+MNT	/run/user/1115025059	n
+MNT	/run/user/1115025183	n
+MNT	/run/user/1115026676	y
+MNT	/run/user/1115022789	n
+MNT	/run/user/1115021738	n
+DONE

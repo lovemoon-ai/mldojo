@@ -1,0 +1,8 @@
+# mldojo dataset register -f docs/examples/dataset-pusht.yaml
+id: pusht
+version: v1
+mount: /data/pusht
+locations:
+  - {kind: node_path, node: gpu-a, path: /data/pusht, authoritative: true}
+  - {kind: node_path, node: gpu-b, path: /data/datasets/pusht}
+  - {kind: bucket, provider: my-provider, bucket: my-bucket, path: datasets/pusht}

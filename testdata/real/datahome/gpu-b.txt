@@ -1,0 +1,36 @@
+USER=alice
+HOME=/home/alice/.mldojo-probe-home
+HOMEMNT=/
+FS	tmpfs	13156912	/run
+FS	ext4	31308660	/
+FS	tmpfs	65802736	/dev/shm
+FS	tmpfs	5116	/run/lock
+FS	ext4	637083136	/mnt/data2
+FS	vfat	518052	/boot/efi
+FS	ext4	410784056	/mnt/data3
+FS	tmpfs	13160496	/run/user/30039
+FS	tmpfs	13160476	/run/user/128
+FS	tmpfs	13159396	/run/user/30038
+FS	tmpfs	13160496	/run/user/1005
+FS	tmpfs	13160492	/run/user/1017
+FS	tmpfs	13160488	/run/user/30041
+FS	tmpfs	13160492	/run/user/1009
+FS	tmpfs	13160488	/run/user/1003
+MNT	/run	n
+MNT	/	n
+UDIR	/	//home/alice	y	y
+MNT	/dev/shm	y
+MNT	/run/lock	y
+MNT	/mnt/data2	y
+UDIR	/mnt/data2	/mnt/data2/alice	y	y
+MNT	/boot/efi	n
+MNT	/mnt/data3	y
+MNT	/run/user/30039	y
+MNT	/run/user/128	n
+MNT	/run/user/30038	n
+MNT	/run/user/1005	n
+MNT	/run/user/1017	n
+MNT	/run/user/30041	n
+MNT	/run/user/1009	n
+MNT	/run/user/1003	n
+DONE

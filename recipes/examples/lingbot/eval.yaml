@@ -1,0 +1,53 @@
+# Evaluating a checkpoint: RoboTwin place_empty_cup, clean and randomized,
+# action horizon 16 and 50.
+#
+# The matrix is the point. What this project iterates is not a loss curve --
+# vla_loss sat at 0.06-0.08 throughout and said nothing -- but a success rate
+# over trials, and the comparison that matters is 2x2:
+#
+#   mldojo run submit -f eval.yaml --target node:h20 --matrix setting,horizon
+#
+# outputs.episodes reads what the harness already writes. The manifest names
+# the seed, the video filenames carry the result, and the two are merged, so
+# eval_single_task.sh does not have to change.
+apiVersion: mldojo/v1
+kind: Experiment
+metadata:
+  project: lingbot
+  name: place-empty-cup-eval
+  tags: [eval, robotwin, dual-arm]
+code:
+  source: none
+env:
+  default:
+    type: none
+# What is being evaluated, by name. The first time this ran it was a path
+# pasted out of a terminal, and afterwards nothing could say which checkpoint
+# the 25% belonged to. train.yaml registers the version; this reads it.
+models:
+  - name: place-empty-cup
+    version: latest
+    as: ckpt
+run:
+  workdir: /opt/lingbot-vla
+  cmd: |
+    EVAL_VIDEO_LOG=True \
+    bash scripts/eval_single_task.sh "${ckpt}" ${setting} ${episodes} ${horizon}
+  params:
+    setting: [clean, randomized]
+    horizon: [16, 50]
+    episodes: 20
+resources:
+  default:
+    gpus: 1
+    gpu_type: h20
+    # The inference server loads the checkpoint in fp32; without this the run
+    # can land on a card somebody else is already holding and OOM.
+    min_mem_gb: 40
+outputs:
+  videos: /opt/lingbot-vla/eval_results/**/*.mp4
+  episodes:
+    # The harness writes a fresh timestamped directory per run, so both
+    # sources are globs; whichever it produced gets read.
+    - {type: csv, path: /opt/lingbot-vla/eval_results/*/manifest.csv}
+    - {type: filenames, path: /opt/lingbot-vla/eval_results/*/episodes}

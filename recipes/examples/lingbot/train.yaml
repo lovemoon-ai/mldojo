@@ -1,0 +1,44 @@
+# Dual-arm manipulation (RoboTwin place_empty_cup), LingBot-VLA-v2-6B on h20.
+#
+# This project cannot be shipped: the code sits next to ~62 GB of base
+# weights, two prebuilt virtualenvs and the RoboTwin simulator assets, on a
+# shared filesystem. So nothing is uploaded -- an absolute run.workdir runs
+# the command in place, and the output globs are absolute too.
+apiVersion: mldojo/v1
+kind: Experiment
+metadata:
+  project: lingbot
+  name: place-empty-cup
+  tags: [vla, robotwin, dual-arm]
+code:
+  source: none
+env:
+  default:
+    type: none
+run:
+  workdir: /opt/lingbot-vla
+  cmd: |
+    OUTPUT_DIR="$PWD/outputs/${run_name}" \
+    MICRO_BATCH_SIZE=${batch} GRADIENT_ACCUMULATION_STEPS=1 \
+    MAX_STEPS=${max_steps} SAVE_STEPS=${save_steps} NUM_WORKERS=${workers} \
+    bash scripts/train_one_step.sh
+  params:
+    run_name: place_empty_cup_b16_w8_2k
+    # batch 32 is a confirmed OOM at 97.8 GB; 16 peaks at 79.5 GB.
+    batch: 16
+    workers: 8
+    max_steps: 2000   # ai brief reads this for progress and ETA
+    save_steps: 500
+resources:
+  default:
+    gpus: 1
+    gpu_type: h20
+outputs:
+  # Registering the result is part of finishing, not a step somebody has to
+  # remember: on success the newest global_step_* directory becomes
+  # lingbot/place-empty-cup@N, which eval.yaml then names.
+  model: place-empty-cup
+  checkpoints: /opt/lingbot-vla/outputs/${run_name}/checkpoints/**/*.safetensors
+  metrics:
+    - type: tensorboard
+      path: /opt/lingbot-vla/outputs/${run_name}/runs

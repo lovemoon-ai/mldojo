@@ -1,0 +1,33 @@
+# MNIST with PyTorch: a small real training run with a learning-rate sweep.
+#
+#   mldojo run submit -f recipe.yaml --target node:<id> --matrix lr --wait
+#
+# Needs python3 with torch and torchvision on the node (or change env.default
+# to a conda/venv/docker environment that has them). The dataset downloads
+# into ./data on first use.
+apiVersion: mldojo/v1
+kind: Experiment
+metadata:
+  project: mnist
+  name: mlp-baseline
+  tags: [example, mnist]
+code:
+  source: local
+  path: .
+env:
+  default:
+    type: none
+run:
+  cmd: python3 train.py --lr ${lr} --epochs ${epochs} --seed ${seed}
+  params:
+    lr: [0.1, 0.01]
+    epochs: 3
+    seed: 0
+resources:
+  default:
+    gpus: 1
+outputs:
+  model: mnist-mlp
+  checkpoints: outputs/*.pt
+  metrics:
+    - {type: jsonl, path: outputs/metrics.jsonl}

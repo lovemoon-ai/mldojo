@@ -1,0 +1,31 @@
+# build output
+/bin/
+/dist/
+*.test
+coverage.out
+
+# site-specific settings and secrets
+.env
+/deploy/site.env
+
+# local runtime state
+/.conductor/
+conductor.log
+/.mldojo/
+/.data/
+
+# web
+/web/node_modules/
+/web/.next/
+/web/out/
+/web/next-env.d.ts
+*.tsbuildinfo
+
+# python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+.DS_Store
+/sshcheck

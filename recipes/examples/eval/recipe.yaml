@@ -1,0 +1,28 @@
+# An evaluation: the result is a rate over trials, not a curve over steps.
+apiVersion: mldojo/v1
+kind: Experiment
+metadata:
+  project: smoke
+  name: rollout-eval
+  tags: [smoke, eval]
+code:
+  source: local
+  path: .
+env:
+  default:
+    type: none
+run:
+  cmd: SETTING=${setting} python3 rollout.py ${episodes}
+  params:
+    setting: [clean, randomized]
+    episodes: 6
+resources:
+  default:
+    gpus: 0
+outputs:
+  videos: eval_results/**/*.mp4
+  episodes:
+    # The manifest carries the seed; the filenames carry the result and the
+    # video. Both are read and merged.
+    - {type: csv, path: eval_results/*/manifest.csv}
+    - {type: filenames, path: eval_results/*/episodes}

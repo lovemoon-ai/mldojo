@@ -1,0 +1,13 @@
+version: "2"
+
+# govet/ineffassign/staticcheck/unused are clean today, so they can gate CI.
+# errcheck is deliberately not enabled yet: ~50 call sites are intentional
+# fire-and-forget (SetWriteDeadline, syscall.Kill, best-effort cleanup) and
+# want an explicit `_ =` pass before it can be a gate.
+linters:
+  default: none
+  enable:
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused

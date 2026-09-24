@@ -1,0 +1,56 @@
+# A full-featured recipe: env/resource overrides per backend, datasets, a seed sweep.
+apiVersion: mldojo/v1
+kind: Experiment
+metadata:
+  project: manip-diffusion
+  name: dp-pusht-baseline
+  tags: [diffusion, pusht]
+
+code:
+  source: git                        # git | local | inline-patch
+  repo: git@github.com:me/xxx.git
+  ref: main
+  # the platform adds commit_sha + dirty_patch at submit time
+
+env:
+  default:
+    type: conda                      # docker | conda | venv | none
+    spec: environment.yaml
+  overrides:
+    - when: {backend_kind: queue, backend: myqueue}
+      use:
+        type: docker
+        image: registry.example.com/ml/cuda-torch:latest
+
+datasets:
+  - name: pusht
+    version: v1
+    mount: /data/pusht
+
+run:
+  cmd: python lerobot/train.py policy=diffusion env=pusht seed=${seed}
+  workdir: .
+  params:
+    seed: [0, 1, 2]
+
+resources:
+  default:
+    gpus: 1
+    gpu_type: "3090|4090|5090|h20"
+    min_mem_gb: 24
+  overrides:
+    - when: {backend_kind: queue, backend: myqueue}
+      use:
+        workers: 1
+        gpu_per_worker: 4
+        cpu_per_worker: 4
+        cpu_mem_ratio: 4
+        wall_time_min: 240
+
+outputs:
+  logs:        outputs/**/*.log
+  checkpoints: outputs/**/*.ckpt
+  videos:      outputs/**/*.mp4
+  metrics:
+    - {type: tensorboard, path: outputs/tb}
+    - {type: jsonl,       path: outputs/metrics.jsonl}

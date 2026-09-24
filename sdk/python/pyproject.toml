@@ -1,0 +1,12 @@
+[project]
+name = "mldojo"
+version = "0.1.0"
+description = "MLDojo SDK: optional metric reporting for MLDojo runs"
+requires-python = ">=3.8"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["mldojo"]
