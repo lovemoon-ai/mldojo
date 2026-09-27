@@ -61,10 +61,10 @@ export function Logo({ className }: { className?: string }) {
 /** Signed-in identity + sign-out; renders nothing until /auth/me answers. */
 function AuthBox({ status, className }: { status: AuthStatus | undefined; className?: string }) {
   const [busy, setBusy] = React.useState(false);
+  const { t } = useT();
   if (!status?.authenticated) return null;
   const sso = status.mode === "sso";
   const u = status.user;
-  const { t } = useT();
   const name = u?.name || u?.email || u?.phone || u?.id || "Conductor";
 
   const signOut = async () => {
