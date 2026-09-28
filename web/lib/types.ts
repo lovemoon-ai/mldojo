@@ -258,6 +258,30 @@ export interface Queue {
   active_runs: number;
 }
 
+/** Live scheduler capacity from GET /queues/resources; total/used/free count `unit`. */
+export interface QueueResource {
+  plugin: string;
+  queue_id?: string;
+  name: string;
+  cluster: string;
+  accelerator: string;
+  unit: "gpu" | "cpu";
+  total: number;
+  used: number;
+  free: number;
+  running_jobs: number;
+  queued_jobs: number;
+  queued_wait_sec: number;
+  usable: boolean;
+  utilization: number | null;
+}
+
+export interface QueueResources {
+  queues: QueueResource[];
+  errors?: Record<string, string>;
+  warnings?: string[];
+}
+
 export interface QueueClient {
   sdk: string;
   credentials?: string;

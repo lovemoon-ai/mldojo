@@ -283,6 +283,8 @@ input_bucket: team_lab
 output_bucket: team_lab
 YAML
 check "queue add" M queue add --id mock/mock-q --project-id e2e --defaults-file "$WORK/q.yaml"
+curl -fsS -H "Authorization: Bearer $MLDOJO_TOKEN" "$MLDOJO_SERVER/api/v1/queues/resources" |
+  py '[(q["plugin"], q["name"], q["unit"]) for q in d["queues"]]' | grep -q '"mock", "default", "cpu"' && ok "queue resources (mock)" || bad "queue resources (mock)"
 id=$(submit -f "$ROOT/recipes/examples/hello/recipe.yaml" --target queue:mock/mock-q --exp queue --param steps=10 --wait)
 [ "$(M run status "$id" --json | py 'd["status"]')" = succeeded ] && ok "queue run succeeded" || bad "queue run: $(logs "$id" system | tail -3)"
 logs "$id" | grep -q 'step 10/10' && ok "queue log snapshot diffed into stdout" || bad "queue log"

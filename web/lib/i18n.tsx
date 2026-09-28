@@ -15,6 +15,18 @@ const LANG_KEY = "mldojo.lang";
 export const LANG_NAMES: Record<Lang, string> = { en: "English", zh: "简体中文" };
 
 const zh = {
+  "Accelerator": "加速卡",
+  "Cluster resources": "集群资源",
+  "cores": "核",
+  "Free": "空闲",
+  "Hide queues without permission": "隐藏无权限的队列",
+  "no permission": "无权限",
+  "oldest waiting {d}": "最久已等 {d}",
+  "registered": "已注册",
+  "Running / queued jobs": "运行 / 排队任务",
+  "Show {n} queues without permission": "显示 {n} 个无权限的队列",
+  "Used / total": "已用 / 总量",
+  "Utilization": "利用率",
   "— end of log —": "— 日志结束 —",
   "(higher is better)": "（越高越好）",
   "(lower is better)": "（越低越好）",

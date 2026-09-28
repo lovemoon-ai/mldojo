@@ -159,6 +159,7 @@ func (s *Server) Routes() http.Handler {
 	api("GET /api/v1/gpus/idle", s.idleGPUs)
 
 	api("GET /api/v1/queues", s.listQueues)
+	api("GET /api/v1/queues/resources", s.queueResources)
 	adminAPI("POST /api/v1/queues", s.addQueue)
 	api("GET /api/v1/queues/{id...}", s.getQueue)
 	adminAPI("DELETE /api/v1/queues/{id...}", s.deleteQueue)

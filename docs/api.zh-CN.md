@@ -105,6 +105,7 @@ Go 类型为准。
 | WS | `/nodes/{id}/gpu/ws` | | kind 为 `gpu` 的 `Frame`，payload 为 `[GPUStat]`，每次心跳（约 5s）一帧 |
 | GET | `/queues` | | `[Queue]` |
 | POST | `/queues` | `Queue`（id、backend、client、defaults 等） | `Queue` |
+| GET | `/queues/resources` | | `{queues: [QueueResource + plugin, queue_id?], errors?, warnings?}`，来自插件的实时容量（[queue-plugins.zh-CN.md](queue-plugins.zh-CN.md#资源)） |
 | GET | `/queues/{id...}` | | `Queue`（id 里带 `/`，例如 `mock/default`；见 [queue-plugins.zh-CN.md](queue-plugins.zh-CN.md)） |
 | DELETE | `/queues/{id...}` | | `{ok}` |
 | GET | `/datasets` | | `[Dataset]` |

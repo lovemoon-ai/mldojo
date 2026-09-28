@@ -103,6 +103,7 @@ should redact tokens and passwords from logs and error messages.
 | `POST /jobs/{id}/metrics` | `{"bucket", "paths": [{"type": "jsonl"\|"tensorboard", "path"}], "tracking"}` | `{"points": [{"step", "key", "value", "ts"}], "warnings"?}` |
 | `POST /jobs/{id}/files` | `{"bucket", "globs": [{"kind", "glob"}], "max_files": 2000}` | `{"files": [{"kind", "path", "size"}], "warnings"?}` |
 | `GET /jobs/{id}/download?bucket=&path=` | | raw bytes, `application/octet-stream`, `Content-Length` when known |
+| `GET /resources` (optional) | | `{"queues": [QueueResource], "warnings"?}`, see below; 404/501 if unsupported |
 
 General rules:
 - Timestamps are RFC3339 or `null`.
@@ -134,6 +135,15 @@ output_bucket, mounts[{bucket,path,mount}], job_password, credentials, extra`.
 `phase` must be one of the MLDojo phases: `queued`, `starting`, `running`, `succeeded`, `failed`, `cancelled`.
 Put the scheduler's own state in `raw_phase` and any reason in `message`. Set `exit_code` when known
 (0 for success; 128+N for death by signal N is a good convention).
+
+### Resources
+
+`GET /resources` reports live capacity of the scheduler queues the plugin's default identity can see; the API
+serves it as `GET /api/v1/queues/resources` and the web Queues page shows it. Each `QueueResource` is
+`{name, cluster, accelerator, unit: "gpu"|"cpu", total, used, free, running_jobs, queued_jobs, queued_wait_sec,
+usable, utilization}`: `total/used/free` count `unit`, `free` is what the queue can still get, `queued_wait_sec`
+is how long the oldest queued job has waited, `usable` is whether this identity may submit there, and
+`utilization` is 0..1 or `null`. Cache the answer briefly (e.g. 20 s).
 
 ### Logs
 

@@ -227,6 +227,13 @@ class MockSidecarTest(unittest.TestCase):
         code, out = self.call("GET", "/health")
         self.assertEqual((code, out), (200, {"ok": True, "mock": True, "sdk": None}))
 
+    def test_resources(self):
+        code, out = self.call("GET", "/resources")
+        self.assertEqual(code, 200, out)
+        q = out["queues"][0]
+        self.assertEqual((q["name"], q["unit"], q["used"], q["usable"]), ("default", "cpu", 0, True))
+        self.assertEqual(q["free"], q["total"])
+
     def test_job_lifecycle_log_and_metrics(self):
         job_id = self.submit(f"{PY} train.py", env={"GREETING": "hi 'there' $HOME"})
         st, seen = self.wait_phase(job_id, ("succeeded", "failed", "cancelled"))

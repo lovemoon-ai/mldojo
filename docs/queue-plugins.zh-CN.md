@@ -98,6 +98,7 @@ mock 插件只依赖 Python 标准库。作业状态放在 `--state-dir` 下（�
 | `POST /jobs/{id}/metrics` | `{"bucket", "paths": [{"type": "jsonl"\|"tensorboard", "path"}], "tracking"}` | `{"points": [{"step", "key", "value", "ts"}], "warnings"?}` |
 | `POST /jobs/{id}/files` | `{"bucket", "globs": [{"kind", "glob"}], "max_files": 2000}` | `{"files": [{"kind", "path", "size"}], "warnings"?}` |
 | `GET /jobs/{id}/download?bucket=&path=` | | 原始字节，`application/octet-stream`，已知大小时带 `Content-Length` |
+| `GET /resources`（可选） | | `{"queues": [QueueResource], "warnings"?}`，见下文；不支持时返回 404/501 |
 
 通用规则：
 - 时间戳用 RFC3339 或 `null`。
@@ -128,6 +129,14 @@ output_bucket, mounts[{bucket,path,mount}], job_password, credentials, extra`。
 `phase` 必须是 MLDojo 的 phase 之一：`queued`、`starting`、`running`、`succeeded`、`failed`、`cancelled`。
 调度器自己的状态放 `raw_phase`，原因放 `message`。知道退出码时填 `exit_code`（成功为 0；被信号 N 杀死时
 报 128+N 是个好约定）。
+
+### 资源
+
+`GET /resources` 返回插件默认身份可见的调度队列的实时容量；API 以 `GET /api/v1/queues/resources` 对外提供，
+Web 的「队列」页会展示。每个 `QueueResource` 是 `{name, cluster, accelerator, unit: "gpu"|"cpu", total, used,
+free, running_jobs, queued_jobs, queued_wait_sec, usable, utilization}`：`total/used/free` 以 `unit` 计，`free`
+是该队列还能拿到的量，`queued_wait_sec` 是排队最久的任务已等待的秒数，`usable` 表示该身份能否提交，
+`utilization` 取 0..1 或 `null`。结果宜短暂缓存（例如 20 秒）。
 
 ### 日志
 

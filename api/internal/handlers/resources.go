@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/base64"
 	"io"
 	"mime"
@@ -11,8 +12,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/lovemoon-ai/mldojo/adapters/queue_sidecar"
 	"github.com/lovemoon-ai/mldojo/api/internal/ai"
 	"github.com/lovemoon-ai/mldojo/api/internal/auth"
 	"github.com/lovemoon-ai/mldojo/api/internal/backends"
@@ -899,6 +902,55 @@ func (s *Server) listQueues(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return ok(w, qs)
+}
+
+type queueResource struct {
+	Plugin  string `json:"plugin"`
+	QueueID string `json:"queue_id,omitempty"` // set when registered as <plugin>/<name>
+	queue_sidecar.QueueResource
+}
+
+// queueResources reports live scheduler capacity from every queue plugin that supports it.
+func (s *Server) queueResources(w http.ResponseWriter, r *http.Request) error {
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+	registered := map[string]bool{}
+	if qs, err := s.store().ListQueues(ctx); err == nil {
+		for _, q := range qs {
+			registered[q.ID] = true
+		}
+	}
+	out := struct {
+		Queues   []queueResource   `json:"queues"`
+		Errors   map[string]string `json:"errors,omitempty"`
+		Warnings []string          `json:"warnings,omitempty"`
+	}{Queues: []queueResource{}, Errors: map[string]string{}}
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for name, be := range s.Queues {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			qs, warns, err := be.Resources(ctx)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				out.Errors[name] = err.Error()
+			}
+			for _, wn := range warns {
+				out.Warnings = append(out.Warnings, name+": "+wn)
+			}
+			for _, q := range qs {
+				qr := queueResource{Plugin: name, QueueResource: q}
+				if id := name + "/" + q.Name; registered[id] {
+					qr.QueueID = id
+				}
+				out.Queues = append(out.Queues, qr)
+			}
+		}()
+	}
+	wg.Wait()
+	return ok(w, out)
 }
 
 func (s *Server) addQueue(w http.ResponseWriter, r *http.Request) error {

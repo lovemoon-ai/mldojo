@@ -105,6 +105,7 @@ Non-2xx responses return `{"error": "...", "code": "..."}`.
 | WS | `/nodes/{id}/gpu/ws` | | `Frame`s kind `gpu`, payload `[GPUStat]`, every heartbeat (~5s) |
 | GET | `/queues` | | `[Queue]` |
 | POST | `/queues` | `Queue` (id, backend, client, defaults, ...) | `Queue` |
+| GET | `/queues/resources` | | `{queues: [QueueResource + plugin, queue_id?], errors?, warnings?}` live capacity from plugins ([queue-plugins.md](queue-plugins.md#resources)) |
 | GET | `/queues/{id...}` | | `Queue` (ids contain `/`, e.g. `mock/default`; see [queue-plugins.md](queue-plugins.md)) |
 | DELETE | `/queues/{id...}` | | `{ok}` |
 | GET | `/datasets` | | `[Dataset]` |

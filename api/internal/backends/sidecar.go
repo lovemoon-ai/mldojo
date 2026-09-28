@@ -69,6 +69,17 @@ func (a *SidecarBackend) Ready(ctx context.Context) bool {
 	return err == nil && h.OK
 }
 
+// Resources asks the plugin for live queue capacity with its default identity.
+// A plugin without GET /resources (404/501) reports nothing.
+func (a *SidecarBackend) Resources(ctx context.Context) ([]queue_sidecar.QueueResource, []string, error) {
+	qs, warnings, err := a.client.Resources(ctx, "")
+	var he *queue_sidecar.HTTPError
+	if errors.As(err, &he) && (he.Status == 404 || he.Status == 501) {
+		return nil, nil, nil
+	}
+	return qs, warnings, err
+}
+
 func (a *SidecarBackend) queue(ctx context.Context, id string) (*v1.Queue, error) {
 	q, err := a.rt.Store.GetQueue(ctx, id)
 	if models.IsNotFound(err) {

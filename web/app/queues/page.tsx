@@ -6,6 +6,7 @@ import { useApi } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
 import type { Queue } from "@/lib/types";
 import { isEmptyJson } from "@/lib/utils";
+import { QueueResourcesCard } from "@/components/queue-resources";
 import { CliHint, Empty, ErrorBox, JsonBlock, KV, Loading, Mono, PageHeader } from "@/components/common";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -99,6 +100,7 @@ export default function QueuesPage() {
           </Table>
         </Card>
       )}
+      <QueueResourcesCard />
       <CliHint
         title={t("Queues are added from the CLI:")}
         command="mldojo queue add --id <plugin>/<queue> --backend <plugin> --credentials secret://<plugin>/default [--defaults-file q.yaml]"

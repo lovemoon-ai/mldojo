@@ -227,3 +227,30 @@ func (c *Client) Metrics(ctx context.Context, jobID, creds, bucket string, paths
 		map[string]any{"bucket": bucket, "paths": paths, "tracking": tracking}, &out)
 	return out.Points, err
 }
+
+// QueueResource is one scheduler queue's live capacity (GET /resources).
+// Total/Used/Free count Unit ("gpu" or "cpu"); Utilization is 0..1 or nil.
+type QueueResource struct {
+	Name          string   `json:"name"`
+	Cluster       string   `json:"cluster"`
+	Accelerator   string   `json:"accelerator"`
+	Unit          string   `json:"unit"`
+	Total         float64  `json:"total"`
+	Used          float64  `json:"used"`
+	Free          float64  `json:"free"`
+	RunningJobs   int      `json:"running_jobs"`
+	QueuedJobs    int      `json:"queued_jobs"`
+	QueuedWaitSec int      `json:"queued_wait_sec"`
+	Usable        bool     `json:"usable"`
+	Utilization   *float64 `json:"utilization"`
+}
+
+// Resources returns the scheduler's queue capacity; plugins without it answer 404/501.
+func (c *Client) Resources(ctx context.Context, creds string) ([]QueueResource, []string, error) {
+	var out struct {
+		Queues   []QueueResource `json:"queues"`
+		Warnings []string        `json:"warnings"`
+	}
+	err := c.do(ctx, "GET", "/resources", creds, nil, &out)
+	return out.Queues, out.Warnings, err
+}

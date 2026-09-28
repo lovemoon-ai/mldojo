@@ -598,6 +598,15 @@ class MockBackend:
     def health(self):
         return {"ok": True, "mock": True, "sdk": None}
 
+    def resources(self, creds):
+        with self.lock:
+            phases = [j.phase for j in self.jobs.values()]
+        running, queued, total = phases.count("running"), phases.count("queued"), os.cpu_count() or 1
+        return {"queues": [{"name": "default", "cluster": "local", "accelerator": "CPU", "unit": "cpu",
+                            "total": total, "used": min(running, total), "free": max(total - running, 0),
+                            "running_jobs": running, "queued_jobs": queued, "queued_wait_sec": 0,
+                            "usable": True, "utilization": None}]}
+
     def _get(self, job_id: str) -> MockJob:
         with self.lock:
             job = self.jobs.get(job_id)
@@ -773,6 +782,8 @@ class Handler(BaseHTTPRequestHandler):
             b = self.backend
             if path == "/health" and method == "GET":
                 out = b.health()
+            elif path == "/resources" and method == "GET":
+                out = b.resources(self._credentials(body))
             elif path == "/jobs" and method == "POST":
                 out = b.submit(body, self._credentials(body))
             else:
