@@ -3,6 +3,7 @@
 //
 //	mldojo-agent --config ~/.mldojo/agent/<node>.yaml
 //	mldojo-agent --server http://api:8765 --token T --node-id gpu-a
+//	mldojo-agent relay --listen 127.0.0.1:PORT   (stdio relay, see below)
 package main
 
 import (
@@ -11,12 +12,14 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
 
+	"github.com/lovemoon-ai/mldojo/adapters/stdio_relay"
 	"github.com/lovemoon-ai/mldojo/agent/internal/exec"
 	msync "github.com/lovemoon-ai/mldojo/agent/internal/sync"
 	"github.com/lovemoon-ai/mldojo/agent/internal/transport"
@@ -48,6 +51,9 @@ func expand(p string) string {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "relay" {
+		os.Exit(relay(os.Args[2:]))
+	}
 	var c config
 	cfgPath := flag.String("config", "", "agent config file (yaml)")
 	flag.StringVar(&c.ServerURL, "server", "", "API server URL")
@@ -144,4 +150,21 @@ func main() {
 	defer stop()
 	slog.Info("mldojo-agent starting", "version", version.Version, "node", c.NodeID, "server", c.ServerURL, "workdir_root", c.WorkdirRoot)
 	a.Run(ctx)
+}
+
+// relay is the node end of a stdio relay (adapters/stdio_relay). The server
+// starts it over plain SSH exec on nodes that can neither reach the API nor
+// forward ports, and the agent dials --listen. It exits when the session ends.
+func relay(args []string) int {
+	fs := flag.NewFlagSet("relay", flag.ExitOnError)
+	listen := fs.String("listen", "127.0.0.1:0", "address to accept connections on")
+	fs.Parse(args)
+	l, err := net.Listen("tcp", *listen)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "mldojo-agent relay:", err)
+		return 1
+	}
+	err = stdio_relay.Serve(stdio_relay.Stdio{Reader: os.Stdin, WriteCloser: os.Stdout}, l)
+	fmt.Fprintln(os.Stderr, "mldojo-agent relay:", err)
+	return 0
 }

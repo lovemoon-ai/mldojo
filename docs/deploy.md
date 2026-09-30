@@ -516,7 +516,9 @@ mldojo node add --id bastion-gpu-1 --ssh "alice@alice@192.0.2.20@bastion.example
 ```
 
 Add `--dry-run` to only test connectivity (route, OS, GPU) without deploying anything. For a node configured with
-`--reverse-tunnel`, dry-run also checks whether the SSH server allows remote forwarding. `mldojo node upgrade <id>`
+`--reverse-tunnel`, dry-run also checks whether the SSH server allows remote forwarding. If it does not, use
+`--reverse-tunnel-mode stdio`: the connection is relayed over the stdin/stdout of a plain exec session instead
+(`adapters/stdio_relay`), which works wherever `ssh host cmd` does. `mldojo node upgrade <id>`
 upgrades the agent in place; running runs are taken over by the new agent.
 
 Note: some JumpServer-style bastion hosts **silently drop** exec commands containing `rm -f` (empty output, exit 0).

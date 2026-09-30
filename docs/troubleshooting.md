@@ -117,6 +117,9 @@ Fixes, by case:
 - **The node cannot reach the API at all** (public cloud machine, one-way firewall): add `--reverse-tunnel` so the agent connects back through an SSH reverse tunnel.
   Verify with `--dry-run` first; the output gains a `reverse tunnel:` line: `ok` means the server allows `-R`,
   `not allowed: ...` means it is blocked (common on bastion hosts).
+- **Forwarding is blocked too** (`AllowTcpForwarding no`, and no outbound network): use `--reverse-tunnel-mode stdio`.
+  The server runs `mldojo-agent relay` on the node over a plain exec session and carries the agent's connection
+  over its stdin/stdout, so nothing but `ssh host cmd` is needed.
 
 The agent log on the node (after `node add` fails the agent is stopped, but the log remains):
 

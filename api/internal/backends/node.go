@@ -175,6 +175,9 @@ func (b *NodeBackend) agentServerURL(ctx context.Context, id string, conn v1.Nod
 		if conn.Type != "ssh" {
 			return "", Userf("reverse_tunnel requires an ssh node")
 		}
+		if m := conn.ReverseTunnelMode; m != "" && m != "forward" && m != "stdio" {
+			return "", Userf("reverse_tunnel_mode must be forward or stdio, not %q", m)
+		}
 		tu, err := b.tunnels.start(ctx, id, conn)
 		if err != nil {
 			return "", Unreachablef("reverse tunnel: %v", err)
@@ -243,11 +246,13 @@ func (b *NodeBackend) ProbeNode(ctx context.Context, req NodeAddRequest) (map[st
 		return nil, Unreachablef("%s: %v", ex.Describe(), err)
 	}
 	res := map[string]any{"ok": true, "route": ex.Describe(), "latency_ms": time.Since(start).Milliseconds(), "probe": p}
-	if se, ok := ex.(node_ssh.Exec); ok && req.Connection.ReverseTunnel {
+	if req.Connection.ReverseTunnel && stdioRelay(req.Connection) {
+		res["reverse_tunnel"] = "stdio relay over exec (needs no port forwarding)"
+	} else if se, ok := ex.(node_ssh.Exec); ok && req.Connection.ReverseTunnel {
 		// Check that the SSH server allows remote forwarding (-R), which
 		// reverse_tunnel needs; bastions often forbid it.
 		if l, err := se.C.Listen("tcp", "127.0.0.1:0"); err != nil {
-			res["reverse_tunnel"] = "not allowed: " + err.Error()
+			res["reverse_tunnel"] = "not allowed: " + err.Error() + " (try --reverse-tunnel-mode stdio)"
 		} else {
 			res["reverse_tunnel"] = "ok"
 			l.Close()

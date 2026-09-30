@@ -205,6 +205,7 @@ export interface NodeConnection {
   extra_ssh_options?: string[];
   agent_server_url?: string;
   reverse_tunnel?: boolean;
+  reverse_tunnel_mode?: string;
 }
 
 export interface Via {

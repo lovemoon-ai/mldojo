@@ -239,6 +239,9 @@ type NodeConnection struct {
 	// ReverseTunnel makes the server keep an SSH session open and forward a
 	// port on the node back to the API (for nodes that cannot reach the server).
 	ReverseTunnel bool `json:"reverse_tunnel,omitempty" yaml:"reverse_tunnel"`
+	// ReverseTunnelMode is how: "forward" (default, ssh -R) or "stdio", a
+	// relay over a plain exec session for sshds that forbid forwarding.
+	ReverseTunnelMode string `json:"reverse_tunnel_mode,omitempty" yaml:"reverse_tunnel_mode"`
 }
 
 type Via struct {

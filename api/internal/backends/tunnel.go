@@ -12,12 +12,15 @@ import (
 	"time"
 
 	"github.com/lovemoon-ai/mldojo/adapters/node_ssh"
+	"github.com/lovemoon-ai/mldojo/adapters/stdio_relay"
 	v1 "github.com/lovemoon-ai/mldojo/proto/mldojo/v1"
 )
 
 // tunnelKeeper maintains SSH reverse port-forwards (connection.reverse_tunnel)
 // so agents on nodes that cannot reach the API (e.g. behind a bastion)
 // dial 127.0.0.1:<port> on their own host, which the server forwards back.
+// Where sshd forbids forwarding, reverse_tunnel_mode: stdio carries the same
+// port over a plain exec session instead (adapters/stdio_relay).
 type tunnelKeeper struct {
 	b  *NodeBackend
 	mu sync.Mutex
@@ -53,27 +56,61 @@ func (k *tunnelKeeper) start(ctx context.Context, nodeID string, conn v1.NodeCon
 		return "", fmt.Errorf("server local URL is not configured")
 	}
 	port := remotePort(nodeID)
-	client, err := k.b.Dialer.Dial(ctx, nodeID, conn)
-	if err != nil {
+	client, l, err := k.listen(ctx, nodeID, conn)
+	if err != nil && !stdioRelay(conn) {
 		return "", err
 	}
-	l, err := client.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-	if err != nil {
-		client.Close()
-		return "", fmt.Errorf("remote listen on %s:127.0.0.1:%d: %w", nodeID, port, err)
-	}
+	// A stdio relay runs the agent binary, which a first `node add` has not
+	// deployed yet: keep retrying in the background, the agent retries too.
 	tctx, cancel := context.WithCancel(context.Background())
 	t := &revTunnel{cancel: cancel, url: fmt.Sprintf("http://127.0.0.1:%d", port)}
 	k.mu.Lock()
 	k.t[nodeID] = t
 	k.mu.Unlock()
 	go k.serve(tctx, nodeID, conn, client, l, local.Host)
-	slog.Info("reverse tunnel up", "node", nodeID, "remote", t.url, "route", client.Route)
+	if err == nil {
+		slog.Info("reverse tunnel up", "node", nodeID, "remote", t.url, "route", client.Route, "mode", conn.ReverseTunnelMode)
+	}
 	return t.url, nil
 }
 
+func stdioRelay(conn v1.NodeConnection) bool { return conn.ReverseTunnelMode == "stdio" }
+
+// relayCmd runs the node end of a stdio relay from the deployed agent binary.
+func relayCmd(port int) string {
+	return fmt.Sprintf(`exec "$HOME/.mldojo/agent/mldojo-agent" relay --listen 127.0.0.1:%d`, port)
+}
+
+// listen opens the node-side port that the agent dials, by -R or by relay.
+func (k *tunnelKeeper) listen(ctx context.Context, nodeID string, conn v1.NodeConnection) (*node_ssh.Client, net.Listener, error) {
+	port := remotePort(nodeID)
+	client, err := k.b.Dialer.Dial(ctx, nodeID, conn)
+	if err != nil {
+		return nil, nil, err
+	}
+	var l net.Listener
+	if stdioRelay(conn) {
+		l, err = stdio_relay.ListenExec(client.Client, relayCmd(port))
+	} else {
+		l, err = client.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	}
+	if err != nil {
+		client.Close()
+		return nil, nil, fmt.Errorf("remote listen on %s:127.0.0.1:%d: %w", nodeID, port, err)
+	}
+	return client, l, nil
+}
+
 func (k *tunnelKeeper) serve(ctx context.Context, nodeID string, conn v1.NodeConnection, client *node_ssh.Client, l net.Listener, localAddr string) {
-	backoff := time.Second
+	backoff, maxBackoff := time.Second, time.Minute
+	if stdioRelay(conn) {
+		maxBackoff = 10 * time.Second // the agent gives up on hello after 60s
+	}
+	for l == nil { // stdio relay whose first attempt failed
+		if client, l = k.redial(ctx, nodeID, conn, &backoff, maxBackoff); client == nil {
+			return
+		}
+	}
 	for {
 		errc := make(chan error, 1)
 		go func() {
@@ -105,27 +142,32 @@ func (k *tunnelKeeper) serve(ctx context.Context, nodeID string, conn v1.NodeCon
 			l.Close()
 			client.Close()
 		}
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(backoff):
-			}
-			if backoff < time.Minute {
-				backoff *= 2
-			}
-			c, err := k.b.Dialer.Dial(ctx, nodeID, conn)
-			if err != nil {
-				continue
-			}
-			nl, err := c.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", remotePort(nodeID)))
-			if err != nil {
-				c.Close()
-				continue
-			}
-			client, l, backoff = c, nl, time.Second
-			break
+		if client, l = k.redial(ctx, nodeID, conn, &backoff, maxBackoff); client == nil {
+			return
 		}
+	}
+}
+
+// redial retries listen with backoff until it works (and resets the backoff)
+// or ctx ends (nil client).
+func (k *tunnelKeeper) redial(ctx context.Context, nodeID string, conn v1.NodeConnection, backoff *time.Duration, maxBackoff time.Duration) (*node_ssh.Client, net.Listener) {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, nil
+		case <-time.After(*backoff):
+		}
+		if *backoff < maxBackoff {
+			*backoff = min(*backoff*2, maxBackoff)
+		}
+		c, l, err := k.listen(ctx, nodeID, conn)
+		if err != nil {
+			slog.Debug("reverse tunnel retry", "node", nodeID, "err", err)
+			continue
+		}
+		slog.Info("reverse tunnel up", "node", nodeID, "route", c.Route, "mode", conn.ReverseTunnelMode)
+		*backoff = time.Second
+		return c, l
 	}
 }
 

@@ -117,6 +117,9 @@ ssh <user@host> "curl -sS -m 5 <url>/api/v1/health"
 - **节点根本到不了 API**（公网机、防火墙单向）：加 `--reverse-tunnel`，让 agent 走 SSH 反向隧道回连。
   加之前先 `--dry-run` 验证，输出里会多一行 `reverse tunnel:`：`ok` 表示服务端允许 `-R`，
   `not allowed: ...` 表示被禁（堡垒机常见）。
+- **连转发也被禁**（`AllowTcpForwarding no`，又没有出网）：用 `--reverse-tunnel-mode stdio`。
+  server 通过普通的 exec 会话在节点上跑 `mldojo-agent relay`，agent 的连接走这个会话的 stdin/stdout，
+  只要能 `ssh host cmd` 就行。
 
 节点本地的 agent 日志（`node add` 失败后 agent 会被停掉，但日志还在）：
 

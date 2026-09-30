@@ -513,7 +513,8 @@ mldojo node add --id bastion-gpu-1 --ssh "alice@alice@192.0.2.20@bastion.example
 ```
 
 加上 `--dry-run` 只测连通性（路由、系统、GPU），不做任何部署。节点配置了 `--reverse-tunnel` 时，dry-run 还会检查
-SSH 服务端是否允许远程转发。`mldojo node upgrade <id>` 会原地升级 agent，正在跑的 run 会被新 agent 接着接管。
+SSH 服务端是否允许远程转发。不允许的话用 `--reverse-tunnel-mode stdio`：连接改走一个普通 exec 会话的
+stdin/stdout（`adapters/stdio_relay`），只要能 `ssh host cmd` 就能用。`mldojo node upgrade <id>` 会原地升级 agent，正在跑的 run 会被新 agent 接着接管。
 
 注意：有些 JumpServer 类堡垒机会**静默丢弃**包含 `rm -f` 的 exec 命令（返回空输出、exit 0）。所以部署脚本不用 `rm`，
 并且会校验每一步是否真的生效（二进制 checksum、启动和停止脚本的完成标记）。

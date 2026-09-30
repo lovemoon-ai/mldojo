@@ -159,7 +159,7 @@ function NodeView() {
                 [t("Identity"), c.identity ? <Mono>{c.identity}</Mono> : "—"],
                 [t("Password"), c.password ? <Mono>{c.password}</Mono> : "—"],
                 [t("Via"), c.via?.length ? c.via.map((v) => v.node).join(" → ") : t("direct")],
-                [t("Reverse tunnel"), c.reverse_tunnel ? t("yes") : t("no")],
+                [t("Reverse tunnel"), c.reverse_tunnel ? (c.reverse_tunnel_mode === "stdio" ? "stdio relay" : t("yes")) : t("no")],
                 ...(c.agent_server_url ? ([[t("Agent server"), <Mono key="u">{c.agent_server_url}</Mono>]] as [string, React.ReactNode][]) : []),
                 ...(c.extra_ssh_options?.length ? ([[t("SSH options"), <Mono key="o">{c.extra_ssh_options.join(" ")}</Mono>]] as [string, React.ReactNode][]) : []),
               ]}

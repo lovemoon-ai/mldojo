@@ -84,7 +84,7 @@ func (a *app) nodeCmd() *cobra.Command {
 		port                                                                                      int
 		via                                                                                       []string
 		local, reverse, dryRun                                                                    bool
-		file                                                                                      string
+		file, tunnelMode                                                                          string
 	}
 	add := &cobra.Command{
 		Use:   "add --id <id> (--ssh user@host | --local)",
@@ -133,7 +133,7 @@ func (a *app) nodeCmd() *cobra.Command {
 			}
 			if req.ssh != "" || req.local || body["connection"] == nil {
 				conn := v1.NodeConnection{Type: "ssh", Port: req.port, Identity: req.identity, Password: req.password,
-					AgentServerURL: req.agentURL, ReverseTunnel: req.reverse}
+					AgentServerURL: req.agentURL, ReverseTunnel: req.reverse || req.tunnelMode != "", ReverseTunnelMode: req.tunnelMode}
 				if req.local {
 					conn.Type = "local"
 				} else {
@@ -213,6 +213,7 @@ func (a *app) nodeCmd() *cobra.Command {
 	f.StringVar(&req.datasets, "datasets-root", "", "dataset cache on the node (default ~/.mldojo/datasets)")
 	f.StringVar(&req.agentURL, "agent-server-url", "", "URL the agent dials back to (default: server public_url)")
 	f.BoolVar(&req.reverse, "reverse-tunnel", false, "tunnel the agent connection back over SSH (node cannot reach the server)")
+	f.StringVar(&req.tunnelMode, "reverse-tunnel-mode", "", "forward (ssh -R, default) or stdio (relay over plain exec, for sshds that forbid forwarding); implies --reverse-tunnel")
 	f.BoolVar(&req.local, "local", false, "the API host itself")
 	f.BoolVar(&req.dryRun, "dry-run", false, "only test the connection (via chain, auth) and probe the node; deploy nothing")
 	f.StringVarP(&req.file, "file", "f", "", "node definition YAML; flags override it")

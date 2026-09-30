@@ -12,8 +12,10 @@ connection:
   via:                                               # tried in order
     - node: gpu-a
     - node: local
-  # If the bastion denies remote forwarding (-R), reverse_tunnel is not an
-  # option; such nodes reach the API directly (e.g. http://mldojo.internal:8765).
+  # If the bastion denies remote forwarding (-R), plain reverse_tunnel is not
+  # an option: reach the API directly (e.g. http://mldojo.internal:8765), or
+  # set reverse_tunnel_mode: stdio to relay over an exec session (not yet
+  # tried through JumpServer-style bastions).
 proxy:
   http: http://proxy.example.com:3128
   https: http://proxy.example.com:3128
