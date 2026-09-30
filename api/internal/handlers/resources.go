@@ -873,7 +873,11 @@ func (s *Server) testNode(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (s *Server) upgradeNode(w http.ResponseWriter, r *http.Request) error {
-	n, err := s.Node.UpgradeNode(r.Context(), r.PathValue("id"))
+	var patch backends.ConnPatch
+	if err := readJSON(r, &patch); err != nil {
+		return err
+	}
+	n, err := s.Node.UpgradeNode(r.Context(), r.PathValue("id"), patch)
 	if err != nil {
 		return err
 	}

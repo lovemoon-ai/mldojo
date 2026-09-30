@@ -1,6 +1,7 @@
 package backends
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -190,12 +191,43 @@ func (b *NodeBackend) agentServerURL(ctx context.Context, id string, conn v1.Nod
 	return u, nil
 }
 
+// ConnPatch moves a node to a new SSH address -- say a container that came
+// back on another port. Zero fields are kept.
+type ConnPatch struct {
+	Host string `json:"host,omitempty"`
+	Port int    `json:"port,omitempty"`
+	User string `json:"user,omitempty"`
+}
+
 // UpgradeNode redeploys the agent (current binary, fresh token) on an
 // existing node. The workdir root is kept so running jobs are re-adopted.
-func (b *NodeBackend) UpgradeNode(ctx context.Context, id string) (*v1.Node, error) {
+// A non-empty patch deploys to the new address and is stored only once the
+// agent has connected from there.
+func (b *NodeBackend) UpgradeNode(ctx context.Context, id string, patch ConnPatch) (_ *v1.Node, err error) {
 	n, err := b.rt.Store.GetNode(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	moved := patch != ConnPatch{}
+	if moved {
+		if n.Connection.Type != "ssh" {
+			return nil, Userf("only ssh nodes have an address to change")
+		}
+		old := n.Connection
+		n.Connection.Host = cmp.Or(patch.Host, old.Host)
+		n.Connection.Port = cmp.Or(patch.Port, old.Port)
+		n.Connection.User = cmp.Or(patch.User, old.User)
+		b.tunnels.stop(id) // it still dials the old address
+		defer func() {
+			if err == nil {
+				err = b.rt.Store.SetNodeConnection(ctx, id, n.Connection)
+				return
+			}
+			b.tunnels.stop(id)
+			if old.ReverseTunnel {
+				b.tunnels.start(context.Background(), id, old)
+			}
+		}()
 	}
 	ex, closeEx, err := b.executor(ctx, id, n.Connection)
 	if err != nil {

@@ -161,6 +161,12 @@ func (s *Store) UpdateNodeAgent(ctx context.Context, id, status, version string,
 	return err
 }
 
+// SetNodeConnection records how to reach a node (node upgrade --ssh/--port).
+func (s *Store) SetNodeConnection(ctx context.Context, id string, c v1.NodeConnection) error {
+	_, err := s.DB.Exec(ctx, `UPDATE nodes SET connection=$2, updated_at=now() WHERE id=$1`, id, nullableJSON(c))
+	return err
+}
+
 func (s *Store) UpdateNodeRoots(ctx context.Context, id, workdir, datasets string) error {
 	_, err := s.DB.Exec(ctx, `UPDATE nodes SET
 		workdir_root = CASE WHEN $2 <> '' THEN $2 ELSE workdir_root END,

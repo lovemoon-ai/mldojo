@@ -394,13 +394,30 @@ func (a *app) nodeCmd() *cobra.Command {
 			return nil
 		},
 	}
+	var move struct {
+		ssh  string
+		port int
+	}
 	upgrade := &cobra.Command{
 		Use: "upgrade <id>...", Short: "Redeploy the current agent binary (running jobs are re-adopted)", Args: cobra.MinimumNArgs(1),
+		Example: "  mldojo node upgrade gpu-a\n  mldojo node upgrade gpu-b --port 33000   # the node came back on another SSH port",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			body := map[string]any{}
+			if move.ssh != "" || move.port != 0 {
+				if len(args) > 1 {
+					return usageErr("--ssh/--port move one node at a time")
+				}
+				if move.ssh != "" {
+					body["user"], body["host"] = splitSSH(move.ssh)
+				}
+				if move.port != 0 {
+					body["port"] = move.port
+				}
+			}
 			var out []v1.Node
 			for _, id := range args {
 				var n v1.Node
-				if err := a.client().Do(cmd.Context(), "POST", "/nodes/"+url.PathEscape(id)+"/upgrade", map[string]any{}, &n); err != nil {
+				if err := a.client().Do(cmd.Context(), "POST", "/nodes/"+url.PathEscape(id)+"/upgrade", body, &n); err != nil {
 					return err
 				}
 				out = append(out, n)
@@ -412,6 +429,8 @@ func (a *app) nodeCmd() *cobra.Command {
 			})
 		},
 	}
+	upgrade.Flags().StringVar(&move.ssh, "ssh", "", "deploy to this user@host instead (stored once the agent connects)")
+	upgrade.Flags().IntVar(&move.port, "port", 0, "deploy to this SSH port instead (stored once the agent connects)")
 	c.AddCommand(add, ls, show, rm, gpuC, histC, diskC, test, upgrade, a.nodeLimitCmd())
 	return c
 }

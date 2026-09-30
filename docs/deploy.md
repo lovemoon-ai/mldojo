@@ -519,7 +519,9 @@ Add `--dry-run` to only test connectivity (route, OS, GPU) without deploying any
 `--reverse-tunnel`, dry-run also checks whether the SSH server allows remote forwarding. If it does not, use
 `--reverse-tunnel-mode stdio`: the connection is relayed over the stdin/stdout of a plain exec session instead
 (`adapters/stdio_relay`), which works wherever `ssh host cmd` does. `mldojo node upgrade <id>`
-upgrades the agent in place; running runs are taken over by the new agent.
+upgrades the agent in place; running runs are taken over by the new agent. If the node came back on another
+address (a container restarted on a new SSH port), `mldojo node upgrade <id> --port N` (or `--ssh user@host`)
+deploys there and records the new address once the agent connects.
 
 Note: some JumpServer-style bastion hosts **silently drop** exec commands containing `rm -f` (empty output, exit 0).
 So the deploy scripts do not use `rm`, and they verify that each step actually took effect (binary checksum, completion markers of the start and stop scripts).
