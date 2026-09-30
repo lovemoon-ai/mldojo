@@ -1,4 +1,5 @@
-// Package gpu collects GPU inventory and utilization via nvidia-smi.
+// Package gpu collects GPU inventory and utilization via nvidia-smi, or
+// amd-smi on ROCm nodes.
 package gpu
 
 import (
@@ -17,8 +18,8 @@ var Bin = "nvidia-smi"
 // psBin is the ps binary (overridable for tests).
 var psBin = "ps"
 
-// Stats queries every GPU, and every process holding one. No nvidia-smi ->
-// no GPUs.
+// Stats queries every GPU, and every process holding one. Neither
+// nvidia-smi nor amd-smi -> no GPUs.
 func Stats(ctx context.Context) []v1.GPUStat {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -26,7 +27,7 @@ func Stats(ctx context.Context) []v1.GPUStat {
 		"--query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu,uuid",
 		"--format=csv,noheader,nounits").Output()
 	if err != nil {
-		return nil
+		return amdStats(ctx)
 	}
 	stats := parse(string(out))
 	attachProcs(ctx, stats)

@@ -252,7 +252,8 @@ type ProbeResult struct {
 func Probe(ctx context.Context, ex Executor) (*ProbeResult, error) {
 	out, err := ex.Run(ctx, `echo "U=$(uname -sm)"; echo "H=$(hostname)"; echo "P=$(python3 --version 2>&1 | head -1)";
 command -v docker >/dev/null 2>&1 && echo D=1; command -v conda >/dev/null 2>&1 && echo C=1;
-nvidia-smi -L 2>/dev/null | sed 's/^/G=/'`, nil)
+if command -v nvidia-smi >/dev/null 2>&1; then nvidia-smi -L 2>/dev/null | sed 's/^/G=/';
+else amd-smi static -a --csv 2>/dev/null | awk -F, 'NR>1{print "G=GPU "$1": "$2}'; fi`, nil)
 	if err != nil {
 		return nil, err
 	}
