@@ -45,7 +45,9 @@ printf '%s\n' "$DF" | while IFS="$(printf '\t')" read -r _ _ _ m; do
   printf 'MNT\t%s\t%s\n' "$m" "$w"
   for c in "$m/$u" "$m/users/$u" "$m/home/$u"; do
     [ -d "$c" ] || continue
-    o=n; [ -O "$c" ] && o=y; cw=n; [ -w "$c" ] && cw=y
+    # On NFS with root squash our own directory shows as nobody's; one that
+    # already holds our data home counts as ours.
+    o=n; { [ -O "$c" ] || { [ -w "$c" ] && [ -d "$c/mldojo/agent" ]; }; } && o=y; cw=n; [ -w "$c" ] && cw=y
     printf 'UDIR\t%s\t%s\t%s\t%s\n' "$m" "$c" "$o" "$cw"
   done
 done
