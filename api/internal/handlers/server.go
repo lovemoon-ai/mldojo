@@ -195,6 +195,7 @@ func (s *Server) Routes() http.Handler {
 	// Agent (internal) endpoints authenticate with agent tokens.
 	mux.HandleFunc("GET /api/v1/agent/connect", s.Node.Hub.HandleConnect)
 	mux.Handle("GET /api/v1/agent/blobs/{sha}", s.agentAuth(s.agentBlob))
+	mux.Handle("GET /api/v1/agent/binary/{file}", s.agentAuth(s.agentBinary))
 	mux.Handle("PUT /api/v1/agent/upload/{id}", s.agentAuth(func(w http.ResponseWriter, r *http.Request, node string) {
 		s.Node.Relay.HandleUpload(w, r, node, r.PathValue("id"))
 	}))

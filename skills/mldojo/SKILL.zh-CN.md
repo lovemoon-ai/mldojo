@@ -428,6 +428,13 @@ mldojo node add --id gpu-a --ssh alice@192.0.2.11 --labels 5090 --dry-run   # �
 mldojo node add --id bastion-gpu-1 --ssh "user@host" --port 2222 --identity secret://ssh_keys/id_ed25519 \
     --via gpu-a --via local --labels 5090,8gpu,bastion
 mldojo node add --id x --ssh user@host --reverse-tunnel     # 节点连不到服务器时，走 SSH 反向隧道回连
+# 服务器根本 SSH 不到节点、但节点能访问服务器地址（只有出网）：注册为 manual 节点
+mldojo node add --id x --manual --labels 6000d,8gpu --agent-server-url https://mldojo.conductor-ai.top   # 打印一次性 join token
+#   然后在节点本机上执行（token 走环境变量，不要放命令行参数）：
+#   curl -fsSL https://mldojo.conductor-ai.top/install.sh | sh
+#   MLDOJO_JOIN_TOKEN=<token> mldojo node join --id x --server https://mldojo.conductor-ai.top
+#   之后升级：在节点上 `mldojo node join --id x`（复用已有配置）；卸载：`mldojo node leave --id x`。
+#   manual 节点不支持 `node upgrade` / `node add --dry-run`；`node test` 只检查 agent 是否在线。
 mldojo node test <id>                     # SSH 可达性 + agent 健康
 # node add 时，如果节点上还没有 ~/.mldojo，会把它建在空闲最多的数据盘上属于该用户的目录里（<盘>/<user>/mldojo），
 # home 下只留软链接；--dry-run 会先显示打算放在哪。已有 ~/.mldojo 的节点不动；想留在 home，部署前先 mkdir ~/.mldojo。

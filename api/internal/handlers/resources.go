@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lovemoon-ai/mldojo/adapters/node_local"
 	"github.com/lovemoon-ai/mldojo/adapters/queue_sidecar"
 	"github.com/lovemoon-ai/mldojo/api/internal/ai"
 	"github.com/lovemoon-ai/mldojo/api/internal/auth"
@@ -839,6 +840,13 @@ func (s *Server) addNode(w http.ResponseWriter, r *http.Request) error {
 		}
 		return ok(w, res)
 	}
+	if req.Connection.Type == "manual" {
+		m, err := s.Node.AddManualNode(r.Context(), req)
+		if err != nil {
+			return err
+		}
+		return writeJSON(w, 201, m)
+	}
 	n, err := s.Node.AddNode(r.Context(), req)
 	if err != nil {
 		return err
@@ -1200,6 +1208,26 @@ func (s *Server) serveBlob(w http.ResponseWriter, r *http.Request, sha string) {
 func (s *Server) getBlob(w http.ResponseWriter, r *http.Request) error {
 	s.serveBlob(w, r, r.PathValue("sha"))
 	return nil
+}
+
+var agentFile = regexp.MustCompile(`^mldojo-agent-(linux|darwin)-(amd64|arm64)$`)
+
+// agentBinary hands the agent binary to `mldojo node join` on a manual node.
+// Unlike the CLI under /dl/ it needs agent credentials: only a node that was
+// given a join token may fetch it.
+func (s *Server) agentBinary(w http.ResponseWriter, r *http.Request, node string) {
+	m := agentFile.FindStringSubmatch(r.PathValue("file"))
+	if m == nil {
+		http.NotFound(w, r)
+		return
+	}
+	p, err := node_local.AgentBinary(s.RT.Cfg.AgentDist, m[1], m[2])
+	if err != nil {
+		writeJSON(w, 404, v1.Error{Error: err.Error(), Code: "not_found"})
+		return
+	}
+	w.Header().Set("Cache-Control", "no-cache")
+	http.ServeFile(w, r, p)
 }
 
 func (s *Server) agentBlob(w http.ResponseWriter, r *http.Request, node string) {

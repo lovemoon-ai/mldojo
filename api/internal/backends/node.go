@@ -65,6 +65,10 @@ func (b *NodeBackend) executor(ctx context.Context, id string, conn v1.NodeConne
 	if conn.Type == "local" {
 		return node_local.Local{}, func() {}, nil
 	}
+	if conn.Type == "manual" {
+		return nil, nil, Userf("node %s is a manual node: the server has no way in, its agent dials out; "+
+			"run `mldojo node join --id %s` on the node itself to (re)deploy it", id, id)
+	}
 	c, err := b.Dialer.Dial(ctx, id, conn)
 	if err != nil {
 		return nil, nil, Unreachablef("%v", err)
@@ -93,8 +97,11 @@ func (b *NodeBackend) AddNode(ctx context.Context, req NodeAddRequest) (*v1.Node
 	if req.Connection.Type == "" {
 		req.Connection.Type = "ssh"
 	}
+	if req.Connection.Type == "manual" {
+		return nil, Userf("manual nodes are added with AddManualNode")
+	}
 	if req.Connection.Type != "ssh" && req.Connection.Type != "local" {
-		return nil, Userf("connection.type must be ssh or local")
+		return nil, Userf("connection.type must be ssh, local or manual")
 	}
 	if req.Connection.Type == "ssh" && req.Connection.Host == "" {
 		return nil, Userf("connection.host is required for ssh nodes")
@@ -161,6 +168,53 @@ func (b *NodeBackend) AddNode(ctx context.Context, req NodeAddRequest) (*v1.Node
 	}
 	slog.Info("node added", "node", req.ID, "route", ex.Describe(), "method", res.Method, "arch", res.OS+"/"+res.Arch)
 	return b.rt.Store.GetNode(ctx, req.ID)
+}
+
+// ManualNode is the reply to adding a manual node: the node record plus the
+// one-time join token, which is shown only here (the server keeps its hash).
+type ManualNode struct {
+	Node      *v1.Node `json:"node"`
+	JoinToken string   `json:"join_token"`
+	ServerURL string   `json:"server_url"`
+}
+
+// AddManualNode registers a node the server cannot reach: nothing is
+// deployed from here. The node is stored offline with a fresh agent token;
+// `mldojo node join` run on the node itself installs the agent with that
+// token, and the agent's first hello fills in capacity and roots.
+func (b *NodeBackend) AddManualNode(ctx context.Context, req NodeAddRequest) (*ManualNode, error) {
+	if !recipes.ValidName(req.ID) {
+		return nil, Userf("invalid node id %q", req.ID)
+	}
+	c := req.Connection
+	if c.Type != "manual" {
+		return nil, Userf("connection.type must be manual")
+	}
+	if c.Host != "" || c.User != "" || c.Port != 0 || len(c.Via) > 0 || c.Identity != "" || c.Password != "" || c.ReverseTunnel || c.ReverseTunnelMode != "" {
+		return nil, Userf("manual nodes take no ssh settings (host, port, via, identity, reverse tunnel): the agent dials out")
+	}
+	if req.WorkdirRoot != "" || req.DatasetsCacheRoot != "" {
+		return nil, Userf("for a manual node pass --workdir-root/--datasets-root to `mldojo node join` on the node")
+	}
+	if _, err := b.rt.Store.GetNode(ctx, req.ID); err == nil {
+		return nil, models.Conflict("node %q already exists", req.ID)
+	}
+	serverURL := cmp.Or(c.AgentServerURL, b.rt.Cfg.PublicURL)
+	if serverURL == "" {
+		return nil, Userf("server public_url is not configured; pass agent_server_url (--agent-server-url) with a URL the node can reach")
+	}
+	tok, hash := NewToken()
+	n := &v1.Node{ID: req.ID, DisplayName: cmp.Or(req.DisplayName, req.ID), Labels: req.Labels, Connection: c,
+		Proxy: req.Proxy, AgentStatus: "offline"}
+	if err := b.rt.Store.InsertNode(ctx, n, hash); err != nil {
+		return nil, err
+	}
+	slog.Info("manual node added; waiting for `mldojo node join` on it", "node", req.ID, "server_url", serverURL)
+	stored, err := b.rt.Store.GetNode(ctx, req.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &ManualNode{Node: stored, JoinToken: tok, ServerURL: serverURL}, nil
 }
 
 // agentServerURL is the URL the node's agent dials back to.
@@ -310,8 +364,11 @@ func (b *NodeBackend) TestNode(ctx context.Context, id string) (*TestResult, err
 	}
 	res := &TestResult{}
 	start := time.Now()
+	manual := n.Connection.Type == "manual"
 	ex, closeEx, err := b.executor(ctx, id, n.Connection)
-	if err != nil {
+	if manual {
+		res.Via = "manual (agent dials in)"
+	} else if err != nil {
 		res.Message = err.Error()
 	} else {
 		res.Via = ex.Describe()
@@ -328,11 +385,17 @@ func (b *NodeBackend) TestNode(ctx context.Context, id string) (*TestResult, err
 		_, err := c.Request(pctx, v1.MsgPing, map[string]any{})
 		cancel()
 		res.AgentOnline = err == nil
+		if manual {
+			res.Reachable = res.AgentOnline
+		}
 		if err != nil && res.Message == "" {
 			res.Message = "agent ping failed: " + err.Error()
 		}
 	} else if res.Message == "" {
 		res.Message = "agent is not connected"
+		if manual {
+			res.Message += " (manual node: has `mldojo node join` been run on it?)"
+		}
 	}
 	res.OK = res.Reachable && res.AgentOnline
 	if res.OK {
@@ -349,7 +412,11 @@ func (b *NodeBackend) RemoveNode(ctx context.Context, id string, stopAgent, forc
 	if n.ActiveRuns > 0 && !force {
 		return models.Conflict("node %s has %d active runs; cancel them or pass force", id, n.ActiveRuns)
 	}
-	if stopAgent {
+	if stopAgent && n.Connection.Type == "manual" {
+		// The token dies with the row, so the agent can no longer connect;
+		// its process and files stay until `mldojo node leave` on the node.
+		slog.Info("manual node removed; its agent stays on the node until `mldojo node leave`", "node", id)
+	} else if stopAgent {
 		if ex, closeEx, err := b.executor(ctx, id, n.Connection); err == nil {
 			if err := node_local.Stop(ctx, ex, id); err != nil {
 				slog.Warn("stop agent", "node", id, "err", err)

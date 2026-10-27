@@ -86,13 +86,17 @@ func (a *app) nodeCmd() *cobra.Command {
 		local, reverse, dryRun                                                                    bool
 		file, tunnelMode                                                                          string
 	}
+	var manual bool
 	add := &cobra.Command{
-		Use:   "add --id <id> (--ssh user@host | --local)",
+		Use:   "add --id <id> (--ssh user@host | --local | --manual)",
 		Short: "Deploy an agent to a node and register it (fails without storing anything if unreachable)",
 		Example: `  mldojo node add --id local --local
   mldojo node add --id gpu-a --ssh alice@192.0.2.10 --labels 5090
   mldojo node add --id bastion-a --ssh "bob@bob@198.51.100.20@bastion.example.com" --port 2222 \
-      --identity secret://ssh_keys/id_rsa_deploy --via gpu-a --via local --labels 5090,8gpu,bastion`,
+      --identity secret://ssh_keys/id_rsa_deploy --via gpu-a --via local --labels 5090,8gpu,bastion
+  # a node the server cannot reach (no inbound ssh), only outbound https:
+  mldojo node add --id gpu-x --manual --labels 6000d,8gpu --agent-server-url https://mldojo.example.com
+  #   then on gpu-x:  MLDOJO_JOIN_TOKEN=<token> mldojo node join --id gpu-x --server https://mldojo.example.com`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if req.id == "" && req.local {
@@ -131,7 +135,18 @@ func (a *app) nodeCmd() *cobra.Command {
 			if changed("labels") {
 				body["labels"] = strings.Split(req.labels, ",")
 			}
-			if req.ssh != "" || req.local || body["connection"] == nil {
+			if manual {
+				if req.ssh != "" || req.local || req.port != 0 || req.identity != "" || req.password != "" || len(req.via) > 0 || req.reverse || req.tunnelMode != "" {
+					return usageErr("--manual takes no ssh flags (--ssh, --local, --port, --identity, --password, --via, --reverse-tunnel): the agent dials out")
+				}
+				if req.dryRun {
+					return usageErr("--dry-run probes over ssh; a manual node has nothing to probe")
+				}
+				if req.workdir != "" || req.datasets != "" {
+					return usageErr("for a manual node pass --workdir-root/--datasets-root to `mldojo node join` on the node")
+				}
+				body["connection"] = v1.NodeConnection{Type: "manual", AgentServerURL: req.agentURL}
+			} else if req.ssh != "" || req.local || body["connection"] == nil {
 				conn := v1.NodeConnection{Type: "ssh", Port: req.port, Identity: req.identity, Password: req.password,
 					AgentServerURL: req.agentURL, ReverseTunnel: req.reverse || req.tunnelMode != "", ReverseTunnelMode: req.tunnelMode}
 				if req.local {
@@ -183,6 +198,26 @@ func (a *app) nodeCmd() *cobra.Command {
 					fmt.Fprintln(w, "(dry run: nothing was deployed)")
 				})
 			}
+			if cm, _ := body["connection"].(map[string]any); cm != nil && cm["type"] == "manual" {
+				manual = true // from -f node.yaml
+			}
+			if manual {
+				var m struct {
+					Node      v1.Node `json:"node"`
+					JoinToken string  `json:"join_token"`
+					ServerURL string  `json:"server_url"`
+				}
+				if err := a.client().Do(cmd.Context(), "POST", "/nodes", body, &m); err != nil {
+					return err
+				}
+				return a.out().Emit(m, func(w ioWriter) {
+					fmt.Fprintf(w, "node %s registered (manual, offline until its agent connects).\n", m.Node.ID)
+					fmt.Fprintf(w, "On %s, with outbound access to %s, run:\n\n", m.Node.ID, m.ServerURL)
+					fmt.Fprintf(w, "  curl -fsSL %s/install.sh | sh\n", m.ServerURL)
+					fmt.Fprintf(w, "  %s=%s ~/.local/bin/mldojo node join --id %s --server %s\n\n", joinTokenEnv, m.JoinToken, m.Node.ID, m.ServerURL)
+					fmt.Fprintln(w, "The token is shown only this once and acts as the node's agent credential; treat it as a secret.")
+				})
+			}
 			if !a.jsonOut {
 				fmt.Fprintf(os.Stderr, "deploying agent to %s (up to ~60s)...\n", req.id)
 			}
@@ -217,6 +252,7 @@ func (a *app) nodeCmd() *cobra.Command {
 	f.BoolVar(&req.local, "local", false, "the API host itself")
 	f.BoolVar(&req.dryRun, "dry-run", false, "only test the connection (via chain, auth) and probe the node; deploy nothing")
 	f.StringVarP(&req.file, "file", "f", "", "node definition YAML; flags override it")
+	f.BoolVar(&manual, "manual", false, "register a node the server cannot reach; prints a one-time token for `mldojo node join` on the node")
 
 	ls := &cobra.Command{
 		Use: "ls", Short: "List nodes", Args: cobra.NoArgs,
@@ -431,7 +467,7 @@ func (a *app) nodeCmd() *cobra.Command {
 	}
 	upgrade.Flags().StringVar(&move.ssh, "ssh", "", "deploy to this user@host instead (stored once the agent connects)")
 	upgrade.Flags().IntVar(&move.port, "port", 0, "deploy to this SSH port instead (stored once the agent connects)")
-	c.AddCommand(add, ls, show, rm, gpuC, histC, diskC, test, upgrade, a.nodeLimitCmd())
+	c.AddCommand(add, ls, show, rm, gpuC, histC, diskC, test, upgrade, a.nodeLimitCmd(), a.nodeJoinCmd(), a.nodeLeaveCmd())
 	return c
 }
 

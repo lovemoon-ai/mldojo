@@ -78,6 +78,10 @@ type DeployResult struct {
 
 var idRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
+// AgentBinary finds mldojo-agent-<goos>-<goarch> in dist (or next to the
+// running executable).
+func AgentBinary(dist, goos, goarch string) (string, error) { return agentBinary(dist, goos, goarch) }
+
 func agentBinary(dist, goos, goarch string) (string, error) {
 	cands := []string{}
 	if dist != "" {

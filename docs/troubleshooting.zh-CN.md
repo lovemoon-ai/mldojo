@@ -118,6 +118,7 @@ ssh <user@host> "curl -sS -m 5 <url>/api/v1/health"
   加之前先 `--dry-run` 验证，输出里会多一行 `reverse tunnel:`：`ok` 表示服务端允许 `-R`，
   `not allowed: ...` 表示被禁（堡垒机常见）。
 - **连转发也被禁**（`AllowTcpForwarding no`，又没有出网）：用 `--reverse-tunnel-mode stdio`。
+- **服务器 SSH 不到节点，但节点能出网访问服务器**：`mldojo node add --id x --manual --agent-server-url <节点能访问的地址>`，再在节点上 `MLDOJO_JOIN_TOKEN=<token> mldojo node join --id x --server <地址>`。
   server 通过普通的 exec 会话在节点上跑 `mldojo-agent relay`，agent 的连接走这个会话的 stdin/stdout，
   只要能 `ssh host cmd` 就行。
 

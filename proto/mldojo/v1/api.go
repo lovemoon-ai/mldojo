@@ -226,7 +226,7 @@ type Node struct {
 }
 
 type NodeConnection struct {
-	Type            string   `json:"type" yaml:"type"` // ssh | local
+	Type            string   `json:"type" yaml:"type"` // ssh | local | manual (agent dials in; no server-side access)
 	Host            string   `json:"host,omitempty" yaml:"host"`
 	Port            int      `json:"port,omitempty" yaml:"port"`
 	User            string   `json:"user,omitempty" yaml:"user"`

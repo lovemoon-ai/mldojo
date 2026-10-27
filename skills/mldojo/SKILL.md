@@ -428,6 +428,13 @@ mldojo node add --id gpu-a --ssh alice@192.0.2.11 --labels 5090 --dry-run   # on
 mldojo node add --id bastion-gpu-1 --ssh "user@host" --port 2222 --identity secret://ssh_keys/id_ed25519 \
     --via gpu-a --via local --labels 5090,8gpu,bastion
 mldojo node add --id x --ssh user@host --reverse-tunnel     # when the node cannot reach the server, connect back through an SSH reverse tunnel
+# The server cannot SSH to the node at all, but the node can reach the server URL (outbound only): register a manual node.
+mldojo node add --id x --manual --labels 6000d,8gpu --agent-server-url https://mldojo.conductor-ai.top   # prints a one-time join token
+#   then on the node itself (token via env, never as a flag):
+#   curl -fsSL https://mldojo.conductor-ai.top/install.sh | sh
+#   MLDOJO_JOIN_TOKEN=<token> mldojo node join --id x --server https://mldojo.conductor-ai.top
+#   upgrade later: `mldojo node join --id x` on the node (reuses its config); uninstall: `mldojo node leave --id x`.
+#   `node upgrade` / `node add --dry-run` do not apply to manual nodes; `node test` reports agent health only.
 mldojo node test <id>                     # SSH reachability + agent health
 # On node add, if the node has no ~/.mldojo yet, it is created in the user's directory on the data disk with the most free space (<disk>/<user>/mldojo),
 # leaving only a symlink in home; --dry-run shows where it plans to put it. Nodes that already have ~/.mldojo are left alone; to keep it in home, mkdir ~/.mldojo before deploying.
