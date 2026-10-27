@@ -145,7 +145,7 @@ running jobs are re-adopted.`,
 		},
 	}
 	f := c.Flags()
-	f.StringVar(&o.id, "id", "", "node id, as given to `mldojo node add --manual`")
+	f.StringVar(&o.id, "id", "", "node id, as given to mldojo node add --manual")
 	f.StringVar(&o.server, "server", "", "server URL the agent dials (default: the installed agent config, then the CLI config)")
 	f.BoolVar(&o.tokenStdin, "token-stdin", false, "read the join token from stdin instead of $"+joinTokenEnv)
 	f.StringVar(&o.workdir, "workdir-root", "", "run workdirs (default ~/.mldojo/runs/<id>)")

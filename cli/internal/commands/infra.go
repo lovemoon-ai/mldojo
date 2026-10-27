@@ -252,7 +252,7 @@ func (a *app) nodeCmd() *cobra.Command {
 	f.BoolVar(&req.local, "local", false, "the API host itself")
 	f.BoolVar(&req.dryRun, "dry-run", false, "only test the connection (via chain, auth) and probe the node; deploy nothing")
 	f.StringVarP(&req.file, "file", "f", "", "node definition YAML; flags override it")
-	f.BoolVar(&manual, "manual", false, "register a node the server cannot reach; prints a one-time token for `mldojo node join` on the node")
+	f.BoolVar(&manual, "manual", false, "register a node the server cannot reach; prints a one-time token for mldojo node join on the node")
 
 	ls := &cobra.Command{
 		Use: "ls", Short: "List nodes", Args: cobra.NoArgs,
