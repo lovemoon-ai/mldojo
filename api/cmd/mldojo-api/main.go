@@ -377,6 +377,7 @@ func serve() error {
 	node.StartTunnels(ctx)
 	node.StartReaper(ctx, backends.DefaultOrphanGrace, backends.DefaultStartingTimeout)
 	node.StartScheduler(ctx)
+	node.StartReviver(ctx)
 	svc.StartSweepController(ctx)
 	go collectGarbage(ctx, st, logs)
 	go watchPlatform(ctx, logs, sec, c.Alerts.DiskLimitGB)
